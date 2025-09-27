@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 Synchronized Multi-Device Speaker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            opacity: 0.8;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .controls {
+            margin: 30px 0;
+        }
+        
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            min-width: 150px;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+        
+        .volume-control {
+            margin: 20px 0;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .audio-visualizer {
+            width: 100%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .visualizer-bar {
+            width: 4px;
+            background: #4CAF50;
+            margin: 0 1px;
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Synchronized Speaker</h1>
+        <div class="subtitle">Multi-Device Audio Streaming</div>
+        
+        <div class="controls">
+            <button id="connectBtn">🔌 Connect</button>
+            <button id="disconnectBtn" disabled>🔌 Disconnect</button>
+            <button id="testAudioBtn" style="display:none;">🔊 Test Audio</button>
+        </div>
+        
+        <div class="volume-control">
+            <div class="metric-label">Volume</div>
+            <input type="range" id="volumeSlider" min="0" max="100" value="70">
+            <div id="volumeValue">70%</div>
+        </div>
+        
+        <div class="audio-visualizer" id="visualizer"></div>
+        
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-label">Status</div>
+                <div class="metric-value" id="status">Disconnected</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Latency</div>
+                <div class="metric-value" id="latency">-- ms</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Buffer Health</div>
+                <div class="metric-value" id="bufferHealth">--</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Sync Offset</div>
+                <div class="metric-value" id="syncOffset">-- ms</div>
+            </div>
+        </div>
+        
+        <div class="status" id="statusLog">
+            Ready to connect...
+        </div>
+    </div>
+
+    <script>
+        class SynchronizedAudioClient {
+            constructor() {
+                this.ws = null;
+                this.audioContext = null;
+                this.audioBuffer = [];
+                this.isPlaying = false;
+                this.volume = 0.7;
+                this.serverTimeOffset = 0;
+                this.latency = 0;
+                this.bufferSize = 0;
+                this.maxBufferSize = 50;
+                this.scheduledAudio = new Map();
+                this.isMobile = this.detectMobile();
+                this.audioQueue = [];
+                this.isProcessingAudio = false;
+                
+                // Mobile-specific buffering
+                this.mobileAudioBuffer = [];
+                this.mobileBufferSize = this.isMobile ? 10 : 5; // Larger buffer for mobile
+                this.lastPlayTime = 0;
+                this.audioChunkDuration = 0.02133; // ~21.33ms per chunk (1024 samples at 48kHz)
+                this.nextScheduledTime = 0;
+                
+                this.initializeElements();
+                this.initializeVisualizer();
+                this.measureLatencyInterval = null;
+                
+                // Add user interaction handler for mobile
+                if (this.isMobile) {
+                    document.addEventListener('touchstart', this.handleUserInteraction.bind(this), { once: true });
+                    document.addEventListener('click', this.handleUserInteraction.bind(this), { once: true });
+                }
+                
+                // Start mobile audio processing loop
+                if (this.isMobile) {
+                    this.startMobileAudioLoop();
+                }
+            }
+            
+            detectMobile() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+            
+            startMobileAudioLoop() {
+                // Continuous audio processing for mobile
+                setInterval(() => {
+                    if (this.audioContext && this.audioContext.state === 'running' && this.mobileAudioBuffer.length > 0) {
+                        this.processMobileAudioBuffer();
+                    }
+                }, 10); // Process every 10ms
+            }
+            
+            processMobileAudioBuffer() {
+                if (this.mobileAudioBuffer.length === 0 || this.isProcessingAudio) {
+                    return;
+                }
+                
+                this.isProcessingAudio = true;
+                
+                try {
+                    // Process multiple chunks at once for smoother playback
+                    const chunksToProcess = Math.min(3, this.mobileAudioBuffer.length);
+                    const combinedChunks = [];
+                    
+                    for (let i = 0; i < chunksToProcess; i++) {
+                        const chunk = this.mobileAudioBuffer.shift();
+                        if (chunk) {
+                            combinedChunks.push(chunk);
+                        }
+                    }
+                    
+                    if (combinedChunks.length > 0) {
+                        this.playCombinedAudioChunks(combinedChunks);
+                    }
+                    
+                } catch (error) {
+                    this.log(`Mobile audio processing error: ${error.message}`);
+                } finally {
+                    this.isProcessingAudio = false;
+                }
+            }
+            
+            async playCombinedAudioChunks(chunks) {
+                try {
+                    if (chunks.length === 0) return;
+                    
+                    // Combine multiple chunks into one buffer for smoother playback
+                    let totalSamples = 0;
+                    chunks.forEach(chunk => totalSamples += chunk.audioData.length);
+                    
+                    if (totalSamples === 0) {
+                        this.log('No audio samples to play');
+                        return;
+                    }
+                    
+                    const combinedSamples = new Float32Array(totalSamples);
+                    let offset = 0;
+                    
+                    chunks.forEach(chunk => {
+                        combinedSamples.set(chunk.audioData, offset);
+                        offset += chunk.audioData.length;
+                    });
+                    
+                    // Verify we have stereo samples
+                    const samplesPerChannel = combinedSamples.length / 2;
+                    if (samplesPerChannel <= 0 || !Number.isInteger(samplesPerChannel)) {
+                        this.log(`Invalid audio format: ${combinedSamples.length} samples`);
+                        return;
+                    }
+                    
+                    // Create audio buffer with proper format
+                    const sampleRate = chunks[0].sampleRate || this.audioContext.sampleRate;
+                    const audioBuffer = this.audioContext.createBuffer(2, samplesPerChannel, sampleRate);
+                    
+                    // Fill stereo channels properly
+                    const leftChannel = audioBuffer.getChannelData(0);
+                    const rightChannel = audioBuffer.getChannelData(1);
+                    
+                    for (let i = 0; i < samplesPerChannel; i++) {
+                        leftChannel[i] = combinedSamples[i * 2] * this.volume;
+                        rightChannel[i] = combinedSamples[i * 2 + 1] * this.volume;
+                    }
+                    
+                    // Schedule playback with continuous timing
+                    const currentTime = this.audioContext.currentTime;
+                    const scheduleTime = Math.max(currentTime + 0.01, this.nextScheduledTime);
+                    
+                    const source = this.audioContext.createBufferSource();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    source.buffer = audioBuffer;
+                    gainNode.gain.value = this.volume;
+                    
+                    source.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    source.start(scheduleTime);
+                    
+                    // Update next scheduled time for seamless playback
+                    this.nextScheduledTime = scheduleTime + audioBuffer.duration;
+                    
+                    // Update visualizer with first chunk
+                    this.updateVisualizer(chunks[0].audioData);
+                    
+                    // Calculate and log audio info
+                    const maxAmplitude = Math.max(...combinedSamples.map(Math.abs));
+                    this.log(`Playing ${samplesPerChannel} samples/channel, duration: ${(audioBuffer.duration * 1000).toFixed(1)}ms, max: ${maxAmplitude.toFixed(3)}`);
+                    
+                } catch (error) {
+                    this.log(`Combined audio playback error: ${error.message}`);
+                }
+            }
+            
+            initializeElements() {
+                this.connectBtn = document.getElementById('connectBtn');
+                this.disconnectBtn = document.getElementById('disconnectBtn');
+                this.testAudioBtn = document.getElementById('testAudioBtn');
+                this.statusElement = document.getElementById('status');
+                this.statusLog = document.getElementById('statusLog');
+                this.latencyElement = document.getElementById('latency');
+                this.bufferHealthElement = document.getElementById('bufferHealth');
+                this.syncOffsetElement = document.getElementById('syncOffset');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.volumeValue = document.getElementById('volumeValue');
+                
+                this.connectBtn.onclick = () => this.connect();
+                this.disconnectBtn.onclick = () => this.disconnect();
+                this.testAudioBtn.onclick = () => this.testAudio();
+                
+                this.volumeSlider.oninput = (e) => {
+                    this.volume = e.target.value / 100;
+                    this.volumeValue.textContent = e.target.value + '%';
+                };
+                
+                // Show test button for mobile
+                if (this.isMobile) {
+                    this.testAudioBtn.style.display = 'inline-block';
+                    this.log('Mobile device detected - tap "Test Audio" first if audio doesn\'t work');
+                }
+            }
+            
+            async testAudio() {
+                this.log('Testing audio system...');
+                try {
+                    const success = await this.initializeAudioContext();
+                    if (success) {
+                        // Play a more realistic test sound instead of beep
+                        const duration = 0.5;
+                        const sampleRate = this.audioContext.sampleRate;
+                        const frameCount = sampleRate * duration;
+                        const audioBuffer = this.audioContext.createBuffer(2, frameCount, sampleRate);
+                        
+                        // Generate a pleasant test tone (major chord)
+                        for (let channel = 0; channel < 2; channel++) {
+                            const channelData = audioBuffer.getChannelData(channel);
+                            for (let i = 0; i < frameCount; i++) {
+                                const t = i / sampleRate;
+                                // Create a major chord (C-E-G)
+                                const sample = (
+                                    Math.sin(2 * Math.PI * 261.63 * t) * 0.3 +  // C4
+                                    Math.sin(2 * Math.PI * 329.63 * t) * 0.3 +  // E4
+                                    Math.sin(2 * Math.PI * 392.00 * t) * 0.3    // G4
+                                ) * Math.exp(-t * 2); // Fade out
+                                channelData[i] = sample * 0.1; // Low volume
+                            }
+                        }
+                        
+                        const source = this.audioContext.createBufferSource();
+                        const gainNode = this.audioContext.createGain();
+                        
+                        source.buffer = audioBuffer;
+                        gainNode.gain.value = 0.1; // Very low volume
+                        
+                        source.connect(gainNode);
+                        gainNode.connect(this.audioContext.destination);
+                        
+                        source.start();
+                        
+                        this.log('Audio test successful! You should hear a pleasant chord.');
+                    } else {
+                        this.log('Audio test failed - check browser permissions');
+                    }
+                } catch (error) {
+                    this.log(`Audio test error: ${error.message}`);
+                }
+            }
+            
+            initializeVisualizer() {
+                this.visualizer = document.getElementById('visualizer');
+                this.visualizerBars = [];
+                
+                // Create visualizer bars
+                for (let i = 0; i < 32; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'visualizer-bar';
+                    bar.style.height = '2px';
+                    this.visualizer.appendChild(bar);
+                    this.visualizerBars.push(bar);
+                }
+            }
+            
+            async handleUserInteraction() {
+                if (this.isMobile && !this.audioContext) {
+                    this.log('Mobile interaction detected, initializing audio...');
+                    await this.initializeAudioContext();
+                }
+            }
+            
+            async initializeAudioContext() {
+                try {
+                    if (!this.audioContext) {
+                        // Use different settings for mobile vs desktop
+                        const contextOptions = this.isMobile ? {
+                            sampleRate: 44100, // More compatible with mobile
+                            latencyHint: 'playback' // Better for mobile streaming
+                        } : {
+                            sampleRate: 48000,
+                            latencyHint: 'interactive'
+                        };
+                        
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)(contextOptions);
+                        
+                        // Mobile browsers require user interaction to start audio
+                        if (this.audioContext.state === 'suspended') {
+                            if (this.isMobile) {
+                                this.log('Waiting for user interaction to start audio...');
+                                return false; // Will retry after user interaction
+                            } else {
+                                await this.audioContext.resume();
+                            }
+                        }
+                    }
+                    
+                    // Ensure context is running
+                    if (this.audioContext.state === 'suspended') {
+                        await this.audioContext.resume();
+                    }
+                    
+                    if (this.audioContext.state === 'running') {
+                        this.log(`Audio context initialized. Sample rate: ${this.audioContext.sampleRate}Hz, State: ${this.audioContext.state}`);
+                        // Initialize next scheduled time
+                        this.nextScheduledTime = this.audioContext.currentTime;
+                        return true;
+                    } else {
+                        this.log(`Audio context not running. State: ${this.audioContext.state}`);
+                        return false;
+                    }
+                } catch (error) {
+                    this.log(`Audio context error: ${error.message}`);
+                    return false;
+                }
+            }
+            
+            connect() {
+                // Force audio context initialization on connection attempt
+                if (this.isMobile && !this.audioContext) {
+                    this.initializeAudioContext().then((success) => {
+                        if (success) {
+                            this.connectToServer();
+                        } else {
+                            this.log('Please tap anywhere on the screen first, then connect again');
+                            return;
+                        }
+                    });
+                } else {
+                    this.connectToServer();
+                }
+            }
+            
+            connectToServer() {
+                const wsUrl = `ws://${window.location.hostname}:8765`;
+                this.log(`Connecting to ${wsUrl}...`);
+                
+                try {
+                    this.ws = new WebSocket(wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        this.log('Connected to server');
+                        this.updateStatus('Connected');
+                        this.connectBtn.disabled = true;
+                        this.disconnectBtn.disabled = false;
+                        
+                        // Start periodic latency measurements
+                        this.measureLatencyInterval = setInterval(() => {
+                            this.measureLatency();
+                        }, 5000);
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        this.handleMessage(JSON.parse(event.data));
+                    };
+                    
+                    this.ws.onclose = () => {
+                        this.log('Disconnected from server');
+                        this.updateStatus('Disconnected');
+                        this.connectBtn.disabled = false;
+                        this.disconnectBtn.disabled = true;
+                        
+                        if (this.measureLatencyInterval) {
+                            clearInterval(this.measureLatencyInterval);
+                        }
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        this.log(`Connection error: ${error}`);
+                        this.updateStatus('Error');
+                    };
+                    
+                } catch (error) {
+                    this.log(`Failed to connect: ${error.message}`);
+                    this.updateStatus('Error');
+                }
+            }
+            
+            disconnect() {
+                if (this.ws) {
+                    this.ws.close();
+                }
+                if (this.measureLatencyInterval) {
+                    clearInterval(this.measureLatencyInterval);
+                }
+            }
+            
+            async handleMessage(data) {
+                switch (data.type) {
+                    case 'init':
+                        this.log(`Server initialized. Sample rate: ${data.sample_rate}Hz`);
+                        await this.initializeAudioContext();
+                        this.serverTimeOffset = Date.now() / 1000 - data.server_time;
+                        break;
+                        
+                    case 'audio':
+                        await this.handleAudioData(data);
+                        break;
+                        
+                    case 'sync':
+                        this.handleSyncData(data);
+                        break;
+                        
+                    case 'pong':
+                        this.handlePongData(data);
+                        break;
+                }
+            }
+            
+            async handleAudioData(data) {
+                if (!this.audioContext) {
+                    const success = await this.initializeAudioContext();
+                    if (!success) {
+                        this.log('Audio context not ready, skipping audio data');
+                        return;
+                    }
+                }
+                
+                if (this.audioContext.state !== 'running') {
+                    this.log(`Audio context not running (${this.audioContext.state}), attempting to resume...`);
+                    try {
+                        await this.audioContext.resume();
+                        if (this.audioContext.state !== 'running') {
+                            this.log('Could not resume audio context');
+                            return;
+                        }
+                    } catch (error) {
+                        this.log(`Error resuming audio context: ${error.message}`);
+                        return;
+                    }
+                }
+                
+                try {
+                    // Decode base64 audio data
+                    const audioBytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
+                    
+                    // Debug: Log audio data info
+                    if (audioBytes.length > 0) {
+                        this.log(`Received ${audioBytes.length} bytes of audio data`);
+                    } else {
+                        this.log('WARNING: Empty audio data received');
+                        return;
+                    }
+                    
+                    // For mobile compatibility, use a different approach
+                    if (this.isMobile) {
+                        await this.playAudioMobile(audioBytes, data);
+                    } else {
+                        await this.playAudioDesktop(audioBytes, data);
+                    }
+                    
+                } catch (error) {
+                    this.log(`Audio playback error: ${error.message}`);
+                }
+            }
+            
+            async playAudioMobile(audioBytes, data) {
+                try {
+                    // Ensure we have the right data format
+                    const audioInt16 = new Int16Array(audioBytes.buffer);
+                    
+                    // Validate audio data
+                    if (audioInt16.length === 0) {
+                        this.log('Empty audio data received');
+                        return;
+                    }
+                    
+                    // Convert int16 to float32 with proper normalization
+                    const samples = new Float32Array(audioInt16.length);
+                    const scale = 1.0 / 16383.0; // Match server scaling
+                    
+                    for (let i = 0; i < audioInt16.length; i++) {
+                        samples[i] = audioInt16[i] * scale;
+                        
+                        // Apply gentle limiting to prevent distortion
+                        if (samples[i] > 0.95) samples[i] = 0.95;
+                        if (samples[i] < -0.95) samples[i] = -0.95;
+                    }
+                    
+                    // Verify we have stereo data (should be even number of samples)
+                    if (samples.length % 2 !== 0) {
+                        this.log(`Warning: Odd number of samples: ${samples.length}`);
+                        return;
+                    }
+                    
+                    // Check for valid audio data (not all zeros or noise)
+                    const maxAmplitude = Math.max(...samples.map(Math.abs));
+                    if (maxAmplitude < 0.001) {
+                        this.log('Audio data too quiet, skipping');
+                        return;
+                    }
+                    
+                    // Add to mobile buffer instead of playing immediately
+                    const audioChunk = {
+                        audioData: samples,
+                        timestamp: data.timestamp,
+                        playAt: data.play_at,
+                        sampleRate: data.sample_rate || 44100,
+                        channels: 2
+                    };
+                    
+                    this.mobileAudioBuffer.push(audioChunk);
+                    
+                    // Keep buffer size manageable
+                    while (this.mobileAudioBuffer.length > this.mobileBufferSize) {
+                        this.mobileAudioBuffer.shift(); // Remove oldest
+                    }
+                    
+                    // Update buffer health display
+                    this.bufferSize = this.mobileAudioBuffer.length;
+                    this.updateBufferHealth();
+                    
+                    // Update visualizer with current data
+                    this.updateVisualizer(samples);
+                    
+                    this.log(`Mobile: Buffered audio (${samples.length} samples, max: ${maxAmplitude.toFixed(3)}). Buffer: ${this.mobileAudioBuffer.length}/${this.mobileBufferSize}`);
+                    
+                } catch (error) {
+                    this.log(`Mobile audio buffering error: ${error.message}`);
+                }
+            }
+            
+            async playAudioDesktop(audioBytes, data) {
+                // Convert int16 back to float32
+                const audioFloat32 = new Float32Array(audioBytes.buffer);
+                const samples = new Float32Array(audioFloat32.length / 2);
+                
+                // Convert int16 to float32 and normalize
+                const audioInt16 = new Int16Array(audioBytes.buffer);
+                for (let i = 0; i < audioInt16.length; i++) {
+                    samples[i] = audioInt16[i] / 32767.0;
+                }
+                
+                // Create audio buffer
+                const audioBuffer = this.audioContext.createBuffer(2, samples.length / 2, data.sample_rate || this.audioContext.sampleRate);
+                
+                // Fill channels (stereo)
+                for (let channel = 0; channel < 2; channel++) {
+                    const channelData = audioBuffer.getChannelData(channel);
+                    for (let i = 0; i < channelData.length; i++) {
+                        channelData[i] = samples[i * 2 + channel] * this.volume;
+                    }
+                }
+                
+                // Calculate when to play for synchronization
+                const currentTime = Date.now() / 1000;
+                const playTime = data.play_at + this.serverTimeOffset;
+                const delay = Math.max(0, playTime - this.audioContext.currentTime);
+                
+                // Schedule playback
+                const source = this.audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(this.audioContext.destination);
+                source.start(this.audioContext.currentTime + delay);
+                
+                // Update visualizer
+                this.updateVisualizer(samples);
+                
+                // Update buffer health
+                this.bufferSize = Math.min(this.bufferSize + 1, this.maxBufferSize);
+                this.updateBufferHealth();
+                
+                // Clean up after playback
+                source.onended = () => {
+                    this.bufferSize = Math.max(0, this.bufferSize - 1);
+                    this.updateBufferHealth();
+                };
+            }
+            
+            createWaveFile(audioData, channels, sampleRate) {
+                const length = audioData.length;
+                const arrayBuffer = new ArrayBuffer(44 + length * 2);
+                const view = new DataView(arrayBuffer);
+                
+                // WAV header
+                const writeString = (offset, string) => {
+                    for (let i = 0; i < string.length; i++) {
+                        view.setUint8(offset + i, string.charCodeAt(i));
+                    }
+                };
+                
+                writeString(0, 'RIFF');
+                view.setUint32(4, 36 + length * 2, true);
+                writeString(8, 'WAVE');
+                writeString(12, 'fmt ');
+                view.setUint32(16, 16, true);
+                view.setUint16(20, 1, true);
+                view.setUint16(22, channels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * channels * 2, true);
+                view.setUint16(32, channels * 2, true);
+                view.setUint16(34, 16, true);
+                writeString(36, 'data');
+                view.setUint32(40, length * 2, true);
+                
+                // Audio data
+                let offset = 44;
+                for (let i = 0; i < length; i++) {
+                    view.setInt16(offset, audioData[i], true);
+                    offset += 2;
+                }
+                
+                return arrayBuffer;
+            }
+            
+            handleSyncData(data) {
+                const clientTime = Date.now() / 1000;
+                const newOffset = clientTime - data.server_time;
+                
+                // Smooth the offset to avoid sudden jumps
+                this.serverTimeOffset = this.serverTimeOffset * 0.9 + newOffset * 0.1;
+                
+                // Update sync offset display
+                this.syncOffsetElement.textContent = Math.round(this.serverTimeOffset * 1000) + ' ms';
+            }
+            
+            handlePongData(data) {
+                if (data.client_time) {
+                    const currentTime = Date.now() / 1000;
+                    this.latency = (currentTime - data.client_time) * 1000; // Convert to ms
+                    this.latencyElement.textContent = Math.round(this.latency) + ' ms';
+                }
+            }
+            
+            measureLatency() {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    const pingData = {
+                        type: 'ping',
+                        client_time: Date.now() / 1000
+                    };
+                    this.ws.send(JSON.stringify(pingData));
+                }
+            }
+            
+            updateVisualizer(samples) {
+                // Simple visualization based on audio amplitude
+                const chunkSize = Math.floor(samples.length / this.visualizerBars.length);
+                
+                for (let i = 0; i < this.visualizerBars.length; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < chunkSize; j++) {
+                        const index = i * chunkSize + j;
+                        if (index < samples.length) {
+                            sum += Math.abs(samples[index]);
+                        }
+                    }
+                    const average = sum / chunkSize;
+                    const height = Math.max(2, Math.min(50, average * 200));
+                    this.visualizerBars[i].style.height = height + 'px';
+                }
+            }
+            
+            updateBufferHealth() {
+                const currentBufferSize = this.isMobile ? this.mobileAudioBuffer.length : this.bufferSize;
+                const maxBuffer = this.isMobile ? this.mobileBufferSize : this.maxBufferSize;
+                const percentage = Math.round((currentBufferSize / maxBuffer) * 100);
+                this.bufferHealthElement.textContent = percentage + '%';
+                
+                // Color coding for buffer health
+                if (percentage < 30) {
+                    this.bufferHealthElement.style.color = '#ff4444'; // Red for low buffer
+                } else if (percentage < 70) {
+                    this.bufferHealthElement.style.color = '#ffaa00'; // Orange for medium buffer
+                } else {
+                    this.bufferHealthElement.style.color = '#44ff44'; // Green for healthy buffer
+                }
+            }
+            
+            updateStatus(status) {
+                this.statusElement.textContent = status;
+            }
+            
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.statusLog.textContent = `[${timestamp}] ${message}`;
+                console.log(message);
+            }
+        }
+        
+        // Initialize the client when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const client = new SynchronizedAudioClient();
+        });
+    </script>
+</body>
+</html>
