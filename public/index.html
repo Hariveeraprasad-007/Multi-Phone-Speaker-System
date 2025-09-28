@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎵 Ultra-Low Latency Audio Sync</title>
+    <title>🎵 Sync Speaker - Movie Audio</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,33 +13,33 @@
 
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
             margin: 0;
-            padding: 15px;
+            padding: 20px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             color: white;
             overflow-x: hidden;
-            font-size: 14px;
         }
         
         .container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
             text-align: center;
-            max-width: 420px;
+            max-width: 450px;
             width: 100%;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         h1 {
-            font-size: 1.8rem;
-            margin: 0 0 5px;
+            font-size: 2.2rem;
+            margin: 0 0 10px;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
             background: linear-gradient(45deg, #fff, #f0f8ff);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -47,34 +47,61 @@
         }
         
         .subtitle {
-            opacity: 0.8;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 25px;
+            font-size: 1rem;
             font-weight: 300;
         }
         
+        .device-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 15px;
+            margin: 15px 0;
+            font-size: 0.85rem;
+        }
+        
         .controls {
-            margin: 20px 0;
+            margin: 25px 0;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 15px;
         }
         
         button {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1.1rem;
             font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        button:hover::before {
+            left: 100%;
         }
         
         button:hover {
-            background: rgba(255, 255, 255, 0.25);
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
         
         button:disabled {
@@ -85,146 +112,175 @@
         
         button.connected {
             background: linear-gradient(45deg, #4CAF50, #45a049);
+            border-color: #4CAF50;
         }
         
         button.primary {
             background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
-        }
-        
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin: 15px 0;
-        }
-        
-        .metric {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 12px 8px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .metric-label {
-            font-size: 0.75rem;
-            opacity: 0.8;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .metric-value {
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-left: 5px;
-            animation: pulse 1s infinite;
-        }
-        
-        .status-good { background: #4CAF50; }
-        .status-warning { background: #FF9800; }
-        .status-error { background: #F44336; }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.1); }
-        }
-        
-        .audio-visualizer {
-            width: 100%;
-            height: 60px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            margin: 15px 0;
-            display: flex;
-            align-items: end;
-            justify-content: center;
-            gap: 1px;
-            padding: 8px;
-            overflow: hidden;
-        }
-        
-        .visualizer-bar {
-            width: 4px;
-            background: linear-gradient(to top, #4CAF50, #81C784);
-            border-radius: 2px 2px 0 0;
-            transition: height 0.05s ease-out;
-            min-height: 1px;
+            border-color: #ff6b6b;
         }
         
         .volume-control {
-            margin: 15px 0;
+            margin: 25px 0;
             background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 12px;
+            padding: 20px;
+            border-radius: 20px;
         }
         
         .volume-label {
-            font-size: 0.9rem;
-            margin-bottom: 8px;
+            font-size: 1rem;
+            margin-bottom: 10px;
             opacity: 0.9;
         }
         
         input[type="range"] {
             width: 100%;
-            height: 6px;
-            border-radius: 3px;
+            height: 8px;
+            border-radius: 5px;
             background: rgba(255, 255, 255, 0.3);
             outline: none;
-            margin: 8px 0;
+            margin: 15px 0;
             -webkit-appearance: none;
             appearance: none;
         }
         
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
+            appearance: none;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            background: #4CAF50;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
             cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .volume-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .audio-visualizer {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            margin: 20px 0;
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            gap: 2px;
+            padding: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .visualizer-bar {
+            width: 6px;
+            background: linear-gradient(to top, #4CAF50, #81C784, #C8E6C9);
+            border-radius: 3px 3px 0 0;
+            transition: height 0.08s ease-out;
+            min-height: 2px;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 10px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .metric-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .metric-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
         }
         
         .status-log {
             background: rgba(0, 0, 0, 0.4);
-            border-radius: 8px;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 0.75rem;
-            max-height: 80px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 120px;
             overflow-y: auto;
-            margin-top: 15px;
+            margin-top: 20px;
             text-align: left;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sync-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 8px;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .sync-indicator.good { color: #4CAF50; }
+        .sync-indicator.warning { color: #FF9800; }
+        .sync-indicator.error { color: #F44336; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
         }
         
         .connection-status {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 12px;
+            top: 15px;
+            right: 15px;
+            font-size: 0.8rem;
+            padding: 5px 12px;
+            border-radius: 20px;
             background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         @media (max-width: 500px) {
             .container {
                 margin: 10px;
-                padding: 20px 15px;
+                padding: 25px 20px;
             }
             
-            h1 { font-size: 1.5rem; }
+            h1 { font-size: 1.8rem; }
             
             .metrics-grid {
                 grid-template-columns: 1fr;
-                gap: 6px;
+                gap: 8px;
+            }
+            
+            .controls {
+                gap: 12px;
             }
         }
     </style>
@@ -233,28 +289,36 @@
     <div class="container">
         <div class="connection-status" id="connectionStatus">Offline</div>
         
-        <h1>Audio Sync</h1>
-        <div class="subtitle">Ultra-Low Latency</div>
+        <h1>Sync Speaker</h1>
+        <div class="subtitle">Multi-Device Movie Audio</div>
+        
+        <div class="device-info" id="deviceInfo">
+            Mobile Device Detected<br>
+            Tap "Enable Audio" first, then Connect
+        </div>
         
         <div class="controls">
             <button id="enableAudioBtn" class="primary">🎵 Enable Audio</button>
-            <button id="connectBtn">🔗 Connect</button>
+            <button id="connectBtn">🔗 Connect to Laptop</button>
             <button id="disconnectBtn" disabled>⏹️ Disconnect</button>
         </div>
         
         <div class="volume-control">
-            <div class="volume-label">Volume: <span id="volumeValue">75%</span></div>
+            <div class="volume-label">Volume Control</div>
             <input type="range" id="volumeSlider" min="0" max="100" value="75">
+            <div class="volume-display" id="volumeValue">75%</div>
         </div>
         
-        <div class="audio-visualizer" id="visualizer"></div>
+        <div class="audio-visualizer" id="visualizer">
+            <!-- Bars will be generated by JavaScript -->
+        </div>
         
         <div class="metrics-grid">
             <div class="metric">
-                <div class="metric-label">Status</div>
+                <div class="metric-label">Connection</div>
                 <div class="metric-value" id="status">
                     Disconnected
-                    <span class="status-indicator status-error"></span>
+                    <span class="sync-indicator error" id="syncIndicator"></span>
                 </div>
             </div>
             <div class="metric">
@@ -262,22 +326,22 @@
                 <div class="metric-value" id="latency">-- ms</div>
             </div>
             <div class="metric">
-                <div class="metric-label">Buffer</div>
-                <div class="metric-value" id="buffer">--</div>
+                <div class="metric-label">Buffer Health</div>
+                <div class="metric-value" id="bufferHealth">--</div>
             </div>
             <div class="metric">
-                <div class="metric-label">Quality</div>
-                <div class="metric-value" id="quality">--</div>
+                <div class="metric-label">Sync Quality</div>
+                <div class="metric-value" id="syncQuality">--</div>
             </div>
         </div>
         
         <div class="status-log" id="statusLog">
-            Ultra-low latency audio sync ready...
+            Ready to connect to your laptop for synchronized movie audio...
         </div>
     </div>
 
     <script>
-        class UltraLowLatencyAudioClient {
+        class EnhancedSyncAudioClient {
             constructor() {
                 this.ws = null;
                 this.audioContext = null;
@@ -286,27 +350,48 @@
                 this.isConnected = false;
                 this.audioEnabled = false;
                 
-                // Ultra-low latency settings
-                this.sampleRate = 48000;
-                this.targetBufferSize = 3; // Minimal buffer
-                this.maxBufferSize = 8;
-                this.audioBuffer = [];
-                this.isProcessing = false;
-                
-                // Timing precision
+                // Enhanced synchronization
                 this.serverTimeOffset = 0;
-                this.latency = 0;
                 this.clockSyncSamples = [];
-                this.lastSequence = -1;
-                this.packetsReceived = 0;
-                this.packetsLost = 0;
+                this.latency = 0;
+                this.bufferHealth = 0;
+                this.syncQuality = 'Unknown';
                 
-                // Performance optimization
+                // Mobile-optimized audio buffering
+                this.audioBuffer = [];
+                this.maxBufferSize = 15; // Larger buffer for stability
+                this.minBufferSize = 3;
+                this.isPlaying = false;
+                this.nextPlayTime = 0;
+                
+                // Precision timing
+                this.performanceTimeOffset = 0;
+                this.lastSyncTime = 0;
+                this.consecutiveSyncErrors = 0;
+                
+                // Device detection
                 this.isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                this.useWebAssembly = false; // Could be enabled for even better performance
+                this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                 
                 this.initializeUI();
                 this.initializeVisualizer();
+                
+                // Auto-detect network and setup
+                this.detectNetworkSetup();
+            }
+            
+            detectNetworkSetup() {
+                // Try to get local IP for better UX
+                try {
+                    const hostname = window.location.hostname;
+                    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                        this.log("Running locally - connect your laptop and mobile to same WiFi");
+                    } else {
+                        this.log(`Connected to ${hostname} - ready for movie audio sync`);
+                    }
+                } catch (e) {
+                    this.log("Network detection failed - manual connection required");
+                }
             }
             
             initializeUI() {
@@ -316,11 +401,13 @@
                 this.statusElement = document.getElementById('status');
                 this.statusLog = document.getElementById('statusLog');
                 this.latencyElement = document.getElementById('latency');
-                this.bufferElement = document.getElementById('buffer');
-                this.qualityElement = document.getElementById('quality');
+                this.bufferHealthElement = document.getElementById('bufferHealth');
+                this.syncQualityElement = document.getElementById('syncQuality');
                 this.volumeSlider = document.getElementById('volumeSlider');
                 this.volumeValue = document.getElementById('volumeValue');
                 this.connectionStatus = document.getElementById('connectionStatus');
+                this.syncIndicator = document.getElementById('syncIndicator');
+                this.deviceInfo = document.getElementById('deviceInfo');
                 
                 // Event listeners
                 this.enableAudioBtn.onclick = () => this.enableAudio();
@@ -331,35 +418,53 @@
                     this.volume = e.target.value / 100;
                     this.volumeValue.textContent = e.target.value + '%';
                 };
+                
+                // Update device info
+                if (this.isMobile) {
+                    if (this.isIOS) {
+                        this.deviceInfo.innerHTML = 'iOS Device Detected<br>Tap "Enable Audio" first for best results';
+                    } else {
+                        this.deviceInfo.innerHTML = 'Android Device Detected<br>Tap "Enable Audio" to prepare audio system';
+                    }
+                } else {
+                    this.deviceInfo.innerHTML = 'Desktop Browser<br>Audio should work automatically';
+                    this.enableAudioBtn.style.display = 'none';
+                }
+                
+                // Prevent screen sleep on mobile
+                if (this.isMobile) {
+                    this.preventSleep();
+                }
             }
             
-            initializeVisualizer() {
-                this.visualizer = document.getElementById('visualizer');
-                this.visualizerBars = [];
-                
-                const barCount = this.isMobile ? 16 : 24;
-                for (let i = 0; i < barCount; i++) {
-                    const bar = document.createElement('div');
-                    bar.className = 'visualizer-bar';
-                    bar.style.height = '1px';
-                    this.visualizer.appendChild(bar);
-                    this.visualizerBars.push(bar);
+            preventSleep() {
+                // Try to prevent mobile screen from sleeping during movie
+                try {
+                    if ('wakeLock' in navigator) {
+                        navigator.wakeLock.request('screen').then(() => {
+                            this.log("Screen wake lock enabled - screen won't sleep during movie");
+                        }).catch(() => {
+                            this.log("Wake lock not available - screen may sleep");
+                        });
+                    }
+                } catch (e) {
+                    // Wake lock not supported
                 }
             }
             
             async enableAudio() {
-                this.log("Initializing ultra-low latency audio...");
+                this.log("Initializing audio system for movie playback...");
                 
                 try {
-                    // Create optimized audio context
+                    // Create audio context with optimal settings for movie audio
                     const contextOptions = {
-                        sampleRate: this.sampleRate,
-                        latencyHint: 'interactive'
+                        sampleRate: this.isMobile ? 44100 : 48000,
+                        latencyHint: this.isMobile ? 'playback' : 'interactive'
                     };
                     
                     this.audioContext = new (window.AudioContext || window.webkitAudioContext)(contextOptions);
                     
-                    // Resume if suspended
+                    // Resume context if suspended (required on mobile)
                     if (this.audioContext.state === 'suspended') {
                         await this.audioContext.resume();
                     }
@@ -370,122 +475,182 @@
                         this.enableAudioBtn.textContent = '✓ Audio Ready';
                         this.enableAudioBtn.classList.add('connected');
                         this.connectBtn.disabled = false;
+                        this.nextPlayTime = this.audioContext.currentTime;
                         
-                        // Start audio processing loop
+                        // Play test tone for confirmation
+                        await this.playTestTone();
+                        
+                        this.log(`Audio system ready! Sample rate: ${this.audioContext.sampleRate}Hz`);
                         this.startAudioProcessing();
-                        
-                        this.log(`Audio ready: ${this.audioContext.sampleRate}Hz, target latency: ${Math.round(this.targetBufferSize * 1000 / this.sampleRate * 256)}ms`);
                         
                     } else {
                         throw new Error(`Audio context state: ${this.audioContext.state}`);
                     }
                 } catch (error) {
-                    this.log(`Audio failed: ${error.message}`);
-                    this.enableAudioBtn.textContent = '❌ Retry Audio';
+                    this.log(`Audio enable failed: ${error.message}`);
+                    this.enableAudioBtn.textContent = '❌ Audio Failed - Retry';
                 }
+            }
+            
+            async playTestTone() {
+                // Play a pleasant confirmation tone
+                const duration = 0.3;
+                const frequency = 880; // A5 note
+                
+                const audioBuffer = this.audioContext.createBuffer(2, this.audioContext.sampleRate * duration, this.audioContext.sampleRate);
+                
+                for (let channel = 0; channel < 2; channel++) {
+                    const channelData = audioBuffer.getChannelData(channel);
+                    for (let i = 0; i < channelData.length; i++) {
+                        const t = i / this.audioContext.sampleRate;
+                        channelData[i] = Math.sin(2 * Math.PI * frequency * t) * 0.1 * Math.exp(-t * 3);
+                    }
+                }
+                
+                const source = this.audioContext.createBufferSource();
+                const gainNode = this.audioContext.createGain();
+                
+                source.buffer = audioBuffer;
+                gainNode.gain.value = 0.1;
+                
+                source.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                source.start();
             }
             
             startAudioProcessing() {
-                // High-frequency audio processing for minimal latency
-                const processLoop = () => {
-                    if (!this.audioEnabled) return;
+                // Continuous audio processing loop for smooth movie audio
+                const processAudio = () => {
+                    if (!this.audioEnabled || !this.audioContext) return;
                     
                     try {
+                        // Process buffered audio chunks
                         this.processAudioBuffer();
-                        this.updateMetrics();
+                        
+                        // Update buffer health display
+                        this.updateBufferHealthDisplay();
+                        
                     } catch (error) {
-                        console.error('Audio processing error:', error);
+                        this.log(`Audio processing error: ${error.message}`);
                     }
                     
+                    // Schedule next processing
                     if (this.audioEnabled) {
-                        // Use requestAnimationFrame for smooth processing
-                        requestAnimationFrame(processLoop);
+                        setTimeout(processAudio, 5); // Process every 5ms for smooth playback
                     }
                 };
                 
-                processLoop();
+                processAudio();
             }
             
             processAudioBuffer() {
-                if (this.audioBuffer.length === 0 || this.isProcessing) return;
+                if (this.audioBuffer.length === 0) return;
                 
-                // Remove excess buffer to maintain low latency
+                // Maintain optimal buffer size
                 while (this.audioBuffer.length > this.maxBufferSize) {
-                    this.audioBuffer.shift();
+                    this.audioBuffer.shift(); // Remove oldest to prevent delay buildup
                 }
                 
-                // Play if we have minimum buffer
-                if (this.audioBuffer.length >= this.targetBufferSize) {
+                // Play audio if we have enough buffered
+                if (this.audioBuffer.length >= this.minBufferSize && !this.isPlaying) {
                     this.playNextAudioChunk();
                 }
             }
             
             async playNextAudioChunk() {
-                if (this.isProcessing || this.audioBuffer.length === 0) return;
+                if (this.audioBuffer.length === 0 || this.isPlaying) return;
                 
-                this.isProcessing = true;
+                this.isPlaying = true;
                 
                 try {
-                    const chunk = this.audioBuffer.shift();
-                    if (chunk && chunk.audioData) {
-                        await this.playAudioChunk(chunk);
+                    // Take multiple chunks for smoother playback
+                    const chunksToPlay = Math.min(3, this.audioBuffer.length);
+                    const chunks = this.audioBuffer.splice(0, chunksToPlay);
+                    
+                    if (chunks.length > 0) {
+                        await this.playCombinedAudioChunks(chunks);
                     }
+                    
                 } catch (error) {
-                    console.error('Playback error:', error);
+                    this.log(`Playback error: ${error.message}`);
                 } finally {
-                    this.isProcessing = false;
+                    this.isPlaying = false;
                 }
             }
             
-            async playAudioChunk(chunk) {
-                try {
-                    const { audioData, sampleRate, channels } = chunk;
-                    
-                    // audioData is already a Float32Array
-                    const samples = audioData;
-                    const samplesPerChannel = samples.length / channels;
-                    
-                    if (samplesPerChannel <= 0) return;
-                    
-                    // Create audio buffer with precise timing
-                    const audioBuffer = this.audioContext.createBuffer(
-                        channels, 
-                        samplesPerChannel, 
-                        sampleRate
-                    );
-                    
-                    // Fill channels with volume control
-                    for (let channel = 0; channel < channels; channel++) {
-                        const channelData = audioBuffer.getChannelData(channel);
-                        for (let i = 0; i < samplesPerChannel; i++) {
-                            channelData[i] = samples[i * channels + channel] * this.volume;
-                        }
-                    }
-                    
-                    // Schedule for immediate playback (minimal latency)
-                    const currentTime = this.audioContext.currentTime;
-                    const playTime = currentTime + 0.005; // 5ms ahead
-                    
-                    const source = this.audioContext.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.connect(this.audioContext.destination);
-                    source.start(playTime);
-                    
-                    // Update visualizer
-                    this.updateVisualizer(samples);
-                    
-                } catch (error) {
-                    console.error('Chunk playback error:', error);
+            async playCombinedAudioChunks(chunks) {
+                if (!chunks.length) return;
+                
+                // Combine multiple chunks for smoother movie audio playback
+                let totalSamples = 0;
+                chunks.forEach(chunk => totalSamples += chunk.audioData.length);
+                
+                if (totalSamples === 0) return;
+                
+                const combinedAudio = new Float32Array(totalSamples);
+                let offset = 0;
+                
+                chunks.forEach(chunk => {
+                    combinedAudio.set(chunk.audioData, offset);
+                    offset += chunk.audioData.length;
+                });
+                
+                // Ensure we have stereo data
+                const samplesPerChannel = combinedAudio.length / 2;
+                if (samplesPerChannel <= 0 || !Number.isInteger(samplesPerChannel)) {
+                    this.log(`Invalid audio format: ${combinedAudio.length} samples`);
+                    return;
                 }
+                
+                // Create high-quality audio buffer
+                const sampleRate = chunks[0].sampleRate || this.audioContext.sampleRate;
+                const audioBuffer = this.audioContext.createBuffer(2, samplesPerChannel, sampleRate);
+                
+                // Fill stereo channels with volume control
+                const leftChannel = audioBuffer.getChannelData(0);
+                const rightChannel = audioBuffer.getChannelData(1);
+                
+                for (let i = 0; i < samplesPerChannel; i++) {
+                    leftChannel[i] = combinedAudio[i * 2] * this.volume;
+                    rightChannel[i] = combinedAudio[i * 2 + 1] * this.volume;
+                }
+                
+                // Schedule playback with precise timing
+                const currentTime = this.audioContext.currentTime;
+                const scheduleTime = Math.max(currentTime + 0.005, this.nextPlayTime);
+                
+                const source = this.audioContext.createBufferSource();
+                const gainNode = this.audioContext.createGain();
+                
+                source.buffer = audioBuffer;
+                gainNode.gain.value = this.volume;
+                
+                source.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                source.start(scheduleTime);
+                
+                // Update next scheduled time for seamless playback
+                this.nextPlayTime = scheduleTime + audioBuffer.duration;
+                
+                // Update visualizer
+                this.updateVisualizer(combinedAudio);
+                
+                // Calculate audio quality metrics
+                const maxAmplitude = Math.max(...combinedAudio.map(Math.abs));
+                const duration = audioBuffer.duration * 1000;
+                
+                this.log(`Playing ${duration.toFixed(1)}ms of movie audio (${chunks.length} chunks combined)`);
             }
             
             connect() {
                 if (!this.audioEnabled && this.isMobile) {
-                    this.log("Please enable audio first");
+                    this.log("Please enable audio first by tapping 'Enable Audio'");
                     return;
                 }
                 
-                this.log("Connecting to server...");
+                this.log("Connecting to laptop for synchronized movie audio...");
                 
                 const wsUrl = `ws://${window.location.hostname}:8765`;
                 
@@ -494,37 +659,32 @@
                     
                     this.ws.onopen = () => {
                         this.isConnected = true;
-                        this.log("Connected! Ultra-low latency mode active");
+                        this.log("Connected! Ready for synchronized movie playback");
                         this.updateConnectionStatus('Connected');
                         this.connectBtn.disabled = true;
                         this.disconnectBtn.disabled = false;
                         this.connectBtn.classList.add('connected');
                         
-                        // Start ping loop for latency measurement
-                        this.startLatencyMeasurement();
+                        // Start sync measurements
+                        this.startSyncMeasurements();
                     };
                     
                     this.ws.onmessage = (event) => {
-                        try {
-                            const data = JSON.parse(event.data);
-                            this.handleServerMessage(data);
-                        } catch (error) {
-                            console.error('Message parsing error:', error);
-                        }
+                        this.handleServerMessage(JSON.parse(event.data));
                     };
                     
                     this.ws.onclose = () => {
                         this.isConnected = false;
-                        this.log("Disconnected from server");
+                        this.log("Disconnected from laptop");
                         this.updateConnectionStatus('Disconnected');
                         this.connectBtn.disabled = false;
                         this.disconnectBtn.disabled = true;
                         this.connectBtn.classList.remove('connected');
-                        this.stopLatencyMeasurement();
+                        this.stopSyncMeasurements();
                     };
                     
-                    this.ws.onerror = () => {
-                        this.log("Connection failed");
+                    this.ws.onerror = (error) => {
+                        this.log("Connection failed - check laptop is running server");
                         this.updateConnectionStatus('Error');
                     };
                     
@@ -537,153 +697,252 @@
                 if (this.ws) {
                     this.ws.close();
                 }
-                this.audioBuffer = [];
-                this.stopLatencyMeasurement();
+                this.audioBuffer = []; // Clear audio buffer
+                this.stopSyncMeasurements();
             }
             
-            handleServerMessage(data) {
+            startSyncMeasurements() {
+                // Measure sync every 3 seconds
+                this.syncInterval = setInterval(() => {
+                    this.measureSync();
+                }, 3000);
+                
+                // Initial measurement
+                setTimeout(() => this.measureSync(), 100);
+            }
+            
+            stopSyncMeasurements() {
+                if (this.syncInterval) {
+                    clearInterval(this.syncInterval);
+                }
+            }
+            
+            measureSync() {
+                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+                
+                const pingData = {
+                    type: 'ping',
+                    client_time: performance.now() / 1000,
+                    performance_time: performance.now()
+                };
+                
+                this.ws.send(JSON.stringify(pingData));
+            }
+            
+            async handleServerMessage(data) {
                 switch (data.type) {
                     case 'init':
                         this.clientId = data.client_id;
-                        this.sampleRate = data.sample_rate;
-                        this.log(`Initialized as ${this.clientId}`);
+                        this.log(`Registered as ${this.clientId} - movie audio sync ready`);
                         break;
                         
                     case 'audio':
-                        this.handleAudioMessage(data);
-                        break;
-                        
-                    case 'pong':
-                        if (data.client_time) {
-                            const currentTime = performance.now() / 1000;
-                            this.latency = (currentTime - data.client_time) * 1000;
-                            this.latencyElement.textContent = Math.round(this.latency) + 'ms';
-                        }
+                        await this.handleAudioData(data);
                         break;
                         
                     case 'sync':
-                        this.handleSyncMessage(data);
+                    case 'sync_response':
+                        this.handleSyncData(data);
                         break;
                         
-                    case 'buffer_adjust':
-                        this.targetBufferSize = Math.ceil(data.target_buffer_ms / 1000 * this.sampleRate / 256);
-                        this.log(`Buffer adjusted to ${data.target_buffer_ms}ms`);
+                    case 'global_sync':
+                        this.handleGlobalSync(data);
+                        break;
+                        
+                    case 'pong':
+                        this.handlePongResponse(data);
+                        break;
+                        
+                    case 'buffer_boost':
+                        this.handleBufferBoost(data);
                         break;
                 }
             }
             
-            handleAudioMessage(data) {
+            async handleAudioData(data) {
+                if (!this.audioEnabled) {
+                    this.log("Audio not enabled - skipping movie audio");
+                    return;
+                }
+                
                 try {
-                    // Decode base64 audio data
-                    const audioBytes = Uint8Array.from(atob(data.audio_data), c => c.charCodeAt(0));
+                    // Decode audio data from server
+                    const audioBytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
                     const audioInt16 = new Int16Array(audioBytes.buffer);
                     
-                    // Convert to float32
+                    if (audioInt16.length === 0) {
+                        return; // Skip empty audio
+                    }
+                    
+                    // Convert to float32 with proper scaling for movie audio
                     const samples = new Float32Array(audioInt16.length);
+                    const scale = 1.0 / 16383.0; // Match server scaling
+                    
                     for (let i = 0; i < audioInt16.length; i++) {
-                        samples[i] = audioInt16[i] / 16383.0;
+                        samples[i] = audioInt16[i] * scale;
+                        // Gentle limiting to prevent distortion in movie audio
+                        if (samples[i] > 0.98) samples[i] = 0.98;
+                        if (samples[i] < -0.98) samples[i] = -0.98;
                     }
                     
-                    // Check for lost packets
-                    if (this.lastSequence >= 0 && data.sequence > this.lastSequence + 1) {
-                        this.packetsLost += (data.sequence - this.lastSequence - 1);
+                    // Verify stereo format
+                    if (samples.length % 2 !== 0) {
+                        this.log(`Warning: Non-stereo audio data received`);
+                        return;
                     }
-                    this.lastSequence = data.sequence;
-                    this.packetsReceived++;
                     
-                    // Create audio chunk
+                    // Check audio quality
+                    const maxAmplitude = Math.max(...samples.map(Math.abs));
+                    if (maxAmplitude < 0.001) {
+                        return; // Skip very quiet audio
+                    }
+                    
+                    // Add to buffer with metadata
                     const audioChunk = {
-                        sequence: data.sequence,
+                        audioData: samples,
                         timestamp: data.timestamp,
-                        serverTime: data.server_time,
-                        sampleRate: data.sample_rate,
-                        channels: data.channels,
-                        audioData: samples
+                        playAt: data.play_at,
+                        sampleRate: data.sample_rate || 44100,
+                        packetId: data.packet_id,
+                        quality: maxAmplitude
                     };
-                    
-                    // Add to buffer
-                    if (this.audioBuffer.length >= this.maxBufferSize) {
-                        this.audioBuffer.shift();
-                    }
                     
                     this.audioBuffer.push(audioChunk);
                     
+                    // Update buffer health
+                    this.bufferHealth = this.audioBuffer.length;
+                    
                 } catch (error) {
-                    console.error('Audio message error:', error);
+                    this.log(`Audio processing error: ${error.message}`);
+                    this.consecutiveSyncErrors++;
+                    
+                    if (this.consecutiveSyncErrors > 5) {
+                        this.reportSyncError('Audio processing errors');
+                    }
                 }
             }
             
-            handleSyncMessage(data) {
+            handleSyncData(data) {
+                const currentTime = performance.now() / 1000;
+                
                 if (data.server_time) {
-                    const currentTime = performance.now() / 1000;
                     const offset = currentTime - data.server_time;
-                    
                     this.clockSyncSamples.push(offset);
-                    if (this.clockSyncSamples.length > 5) {
+                    
+                    // Keep only recent samples
+                    if (this.clockSyncSamples.length > 10) {
                         this.clockSyncSamples.shift();
                     }
                     
+                    // Calculate average offset
                     this.serverTimeOffset = this.clockSyncSamples.reduce((a, b) => a + b) / this.clockSyncSamples.length;
+                    
+                    this.updateSyncQuality();
                 }
             }
             
-            startLatencyMeasurement() {
-                this.pingInterval = setInterval(() => {
-                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                        const pingData = {
-                            type: 'ping',
-                            client_time: performance.now() / 1000,
-                            client_id: this.clientId
-                        };
-                        this.ws.send(JSON.stringify(pingData));
+            handleGlobalSync(data) {
+                this.log(`Global sync point set - all devices will align at ${new Date(data.global_start_time * 1000).toLocaleTimeString()}`);
+                
+                // Prepare for global synchronization
+                if (data.global_start_time) {
+                    const currentTime = performance.now() / 1000;
+                    const timeToSync = data.global_start_time - currentTime;
+                    
+                    if (timeToSync > 0) {
+                        setTimeout(() => {
+                            this.log("Global sync activated - all devices now synchronized!");
+                            this.audioBuffer = []; // Clear buffer for fresh start
+                            this.nextPlayTime = this.audioContext.currentTime;
+                        }, timeToSync * 1000);
                     }
-                }, 2000); // Every 2 seconds
-            }
-            
-            stopLatencyMeasurement() {
-                if (this.pingInterval) {
-                    clearInterval(this.pingInterval);
-                    this.pingInterval = null;
                 }
             }
             
-            updateMetrics() {
-                // Update buffer status
-                this.bufferElement.textContent = this.audioBuffer.length;
+            handlePongResponse(data) {
+                if (data.client_time) {
+                    const currentTime = performance.now() / 1000;
+                    this.latency = (currentTime - data.client_time) * 1000; // Convert to ms
+                    this.latencyElement.textContent = Math.round(this.latency) + ' ms';
+                    
+                    // Reset error counter on successful ping
+                    this.consecutiveSyncErrors = 0;
+                }
+            }
+            
+            handleBufferBoost(data) {
+                this.log("Buffer boost received - improving playback stability");
+                this.maxBufferSize = Math.min(this.maxBufferSize + 3, 20);
+            }
+            
+            reportSyncError(error) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    const errorReport = {
+                        type: 'sync_error',
+                        error: error,
+                        client_id: this.clientId,
+                        buffer_size: this.audioBuffer.length,
+                        timestamp: performance.now() / 1000
+                    };
+                    this.ws.send(JSON.stringify(errorReport));
+                }
+            }
+            
+            updateSyncQuality() {
+                const avgOffset = Math.abs(this.serverTimeOffset);
+                let quality, indicator;
                 
-                // Update quality based on packet loss
-                const lossRate = this.packetsReceived > 0 ? (this.packetsLost / this.packetsReceived) * 100 : 0;
-                let quality;
-                
-                if (lossRate < 0.1) {
+                if (avgOffset < 0.01) {
                     quality = 'Excellent';
-                } else if (lossRate < 1) {
+                    indicator = 'good';
+                } else if (avgOffset < 0.05) {
                     quality = 'Good';
-                } else if (lossRate < 5) {
+                    indicator = 'good';
+                } else if (avgOffset < 0.1) {
                     quality = 'Fair';
+                    indicator = 'warning';
                 } else {
                     quality = 'Poor';
+                    indicator = 'error';
                 }
                 
-                this.qualityElement.textContent = quality;
+                this.syncQuality = quality;
+                this.syncQualityElement.textContent = quality;
+                this.syncIndicator.className = `sync-indicator ${indicator}`;
+            }
+            
+            updateBufferHealthDisplay() {
+                const health = Math.round((this.bufferHealth / this.maxBufferSize) * 100);
+                this.bufferHealthElement.textContent = `${health}%`;
                 
-                // Send buffer status to server
-                if (this.ws && this.ws.readyState === WebSocket.OPEN && this.packetsReceived % 50 === 0) {
-                    const status = {
-                        type: 'buffer_status',
-                        buffer_size: this.audioBuffer.length,
-                        packets_received: this.packetsReceived,
-                        packets_lost: this.packetsLost,
-                        client_id: this.clientId
-                    };
-                    this.ws.send(JSON.stringify(status));
+                // Color coding
+                if (health < 30) {
+                    this.bufferHealthElement.style.color = '#F44336';
+                } else if (health < 70) {
+                    this.bufferHealthElement.style.color = '#FF9800';
+                } else {
+                    this.bufferHealthElement.style.color = '#4CAF50';
                 }
             }
             
             updateConnectionStatus(status) {
                 this.connectionStatus.textContent = status;
-                this.statusElement.innerHTML = status + ' <span class="status-indicator status-' + 
-                    (status === 'Connected' ? 'good' : 'error') + '"></span>';
+                this.statusElement.textContent = status;
+            }
+            
+            initializeVisualizer() {
+                this.visualizer = document.getElementById('visualizer');
+                this.visualizerBars = [];
+                
+                // Create visualizer bars (fewer for mobile performance)
+                const barCount = this.isMobile ? 20 : 32;
+                for (let i = 0; i < barCount; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'visualizer-bar';
+                    bar.style.height = '2px';
+                    this.visualizer.appendChild(bar);
+                    this.visualizerBars.push(bar);
+                }
             }
             
             updateVisualizer(samples) {
@@ -700,7 +959,7 @@
                         }
                     }
                     const average = sum / chunkSize;
-                    const height = Math.max(1, Math.min(50, average * 200));
+                    const height = Math.max(2, Math.min(60, average * 300));
                     this.visualizerBars[i].style.height = height + 'px';
                 }
             }
@@ -709,13 +968,14 @@
                 const timestamp = new Date().toLocaleTimeString();
                 const logMessage = `[${timestamp}] ${message}`;
                 this.statusLog.textContent = logMessage;
+                this.statusLog.scrollTop = this.statusLog.scrollHeight;
                 console.log(logMessage);
             }
         }
         
-        // Initialize client when page loads
+        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new UltraLowLatencyAudioClient();
+            new EnhancedSyncAudioClient();
         });
     </script>
 </body>
