@@ -66,7 +66,7 @@ class UltraLowLatencyBroadcaster:
             'buffer_underruns': 0
         }
         
-    async def add_client(self, websocket, path):
+    async def add_client(self, websocket, path=None):
         client_id = f"client_{int(time.time() * 1000000) % 1000000}"
         client_info = {
             'websocket': websocket,
@@ -269,11 +269,11 @@ def optimized_audio_callback(indata, frames, time_info, status):
     except Exception as e:
         logger.error(f"Audio callback error: {e}")
 
-async def handle_websocket_connection(websocket, path):
+async def handle_websocket_connection(websocket):
     """Handle WebSocket connections with enhanced error handling"""
     client_id = None
     try:
-        client_id = await broadcaster.add_client(websocket, path)
+        client_id = await broadcaster.add_client(websocket, None)
         
         # Handle client messages
         async for message in websocket:
@@ -370,9 +370,8 @@ async def main_server():
                 max_size=None,  # Remove message size limit
                 max_queue=10,   # Limit queue size for low latency
                 compression=None,  # Disable compression for speed
-                ping_interval=None,  # Disable automatic pings
-                ping_timeout=None,
-                close_timeout=5
+                ping_interval=20,  # Keep connections alive
+                ping_timeout=10
             )
             
             logger.info("WebSocket server running on ws://0.0.0.0:8765")

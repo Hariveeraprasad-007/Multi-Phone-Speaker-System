@@ -439,10 +439,14 @@
             
             async playAudioChunk(chunk) {
                 try {
-                    const { audioData, sampleRate, channels, timestamp } = chunk;
+                    const { audioData, sampleRate, channels } = chunk;
                     
-                    // Decode binary audio data
-                    const samples = new Float32Array(audioData.buffer);
+                    // Convert Uint8Array back to Float32Array
+                    const samples = new Float32Array(audioData.buffer.slice(
+                        audioData.byteOffset, 
+                        audioData.byteOffset + audioData.byteLength
+                    ));
+                    
                     const samplesPerChannel = samples.length / channels;
                     
                     if (samplesPerChannel <= 0) return;
