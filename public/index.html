@@ -441,12 +441,8 @@
                 try {
                     const { audioData, sampleRate, channels } = chunk;
                     
-                    // Convert Uint8Array back to Float32Array
-                    const samples = new Float32Array(audioData.buffer.slice(
-                        audioData.byteOffset, 
-                        audioData.byteOffset + audioData.byteLength
-                    ));
-                    
+                    // audioData is already a Float32Array
+                    const samples = audioData;
                     const samplesPerChannel = samples.length / channels;
                     
                     if (samplesPerChannel <= 0) return;
@@ -510,14 +506,10 @@
                     
                     this.ws.onmessage = (event) => {
                         try {
-                            if (event.data instanceof ArrayBuffer) {
-                                this.handleBinaryMessage(event.data);
-                            } else {
-                                const data = JSON.parse(event.data);
-                                this.handleServerMessage(data);
-                            }
+                            const data = JSON.parse(event.data);
+                            this.handleServerMessage(data);
                         } catch (error) {
-                            console.error('Message handling error:', error);
+                            console.error('Message parsing error:', error);
                         }
                     };
                     
@@ -549,61 +541,16 @@
                 this.stopLatencyMeasurement();
             }
             
-            handleBinaryMessage(arrayBuffer) {
-                try {
-                    // Parse binary audio data
-                    const view = new DataView(arrayBuffer);
-                    let offset = 0;
-                    
-                    // Read header
-                    const type = view.getUint8(offset); offset += 1;
-                    if (type !== 1) return; // Not audio data
-                    
-                    const sequence = view.getUint32(offset, false); offset += 4;
-                    const timestamp = view.getFloat64(offset, false); offset += 8;
-                    const serverTime = view.getFloat64(offset, false); offset += 8;
-                    const sampleRate = view.getUint32(offset, false); offset += 4;
-                    const channels = view.getUint8(offset); offset += 1;
-                    const dataLength = view.getUint32(offset, false); offset += 4;
-                    
-                    // Check for lost packets
-                    if (this.lastSequence >= 0 && sequence > this.lastSequence + 1) {
-                        this.packetsLost += (sequence - this.lastSequence - 1);
-                    }
-                    this.lastSequence = sequence;
-                    this.packetsReceived++;
-                    
-                    // Extract audio data
-                    const audioData = arrayBuffer.slice(offset);
-                    
-                    // Add to buffer
-                    const audioChunk = {
-                        sequence,
-                        timestamp,
-                        serverTime,
-                        sampleRate,
-                        channels,
-                        audioData: new Uint8Array(audioData)
-                    };
-                    
-                    // Maintain buffer size for low latency
-                    if (this.audioBuffer.length >= this.maxBufferSize) {
-                        this.audioBuffer.shift(); // Remove oldest
-                    }
-                    
-                    this.audioBuffer.push(audioChunk);
-                    
-                } catch (error) {
-                    console.error('Binary message error:', error);
-                }
-            }
-            
             handleServerMessage(data) {
                 switch (data.type) {
                     case 'init':
                         this.clientId = data.client_id;
                         this.sampleRate = data.sample_rate;
                         this.log(`Initialized as ${this.clientId}`);
+                        break;
+                        
+                    case 'audio':
+                        this.handleAudioMessage(data);
                         break;
                         
                     case 'pong':
@@ -622,6 +569,47 @@
                         this.targetBufferSize = Math.ceil(data.target_buffer_ms / 1000 * this.sampleRate / 256);
                         this.log(`Buffer adjusted to ${data.target_buffer_ms}ms`);
                         break;
+                }
+            }
+            
+            handleAudioMessage(data) {
+                try {
+                    // Decode base64 audio data
+                    const audioBytes = Uint8Array.from(atob(data.audio_data), c => c.charCodeAt(0));
+                    const audioInt16 = new Int16Array(audioBytes.buffer);
+                    
+                    // Convert to float32
+                    const samples = new Float32Array(audioInt16.length);
+                    for (let i = 0; i < audioInt16.length; i++) {
+                        samples[i] = audioInt16[i] / 16383.0;
+                    }
+                    
+                    // Check for lost packets
+                    if (this.lastSequence >= 0 && data.sequence > this.lastSequence + 1) {
+                        this.packetsLost += (data.sequence - this.lastSequence - 1);
+                    }
+                    this.lastSequence = data.sequence;
+                    this.packetsReceived++;
+                    
+                    // Create audio chunk
+                    const audioChunk = {
+                        sequence: data.sequence,
+                        timestamp: data.timestamp,
+                        serverTime: data.server_time,
+                        sampleRate: data.sample_rate,
+                        channels: data.channels,
+                        audioData: samples
+                    };
+                    
+                    // Add to buffer
+                    if (this.audioBuffer.length >= this.maxBufferSize) {
+                        this.audioBuffer.shift();
+                    }
+                    
+                    this.audioBuffer.push(audioChunk);
+                    
+                } catch (error) {
+                    console.error('Audio message error:', error);
                 }
             }
             

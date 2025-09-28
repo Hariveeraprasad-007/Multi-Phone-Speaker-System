@@ -113,15 +113,14 @@ class UltraLowLatencyBroadcaster:
         
         try:
             websocket = self.clients[client_id]['websocket']
-            if websocket.open:
-                # Use binary mode for audio data, text for control messages
-                if data.get('type') == 'audio':
-                    # Send as binary for better performance
-                    binary_data = self.pack_audio_data(data)
-                    await websocket.send(binary_data)
-                else:
-                    await websocket.send(json.dumps(data))
-                return True
+            # Check if connection is still active
+            if websocket.closed:
+                await self.remove_client(client_id)
+                return False
+                
+            # Send as JSON for simplicity
+            await websocket.send(json.dumps(data))
+            return True
         except websockets.exceptions.ConnectionClosed:
             await self.remove_client(client_id)
         except Exception as e:
@@ -150,8 +149,10 @@ class UltraLowLatencyBroadcaster:
         if not self.clients:
             return
         
-        # Convert to bytes for transmission
-        audio_bytes = audio_data.astype(np.float32).tobytes()
+        # Convert to base64 for now (we can optimize later)
+        audio_int16 = (audio_data * 16383).astype(np.int16)
+        audio_bytes = audio_int16.tobytes()
+        audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
         
         # Calculate precise timing
         server_time = time.time()
@@ -165,7 +166,7 @@ class UltraLowLatencyBroadcaster:
             'play_at': play_time,
             'sample_rate': SAMPLE_RATE,
             'channels': CHANNELS,
-            'audio_data': audio_bytes,
+            'audio_data': audio_b64,
             'chunk_duration_ms': (len(audio_data) // CHANNELS) / SAMPLE_RATE * 1000
         }
         
