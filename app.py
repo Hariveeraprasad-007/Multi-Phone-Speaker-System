@@ -23,13 +23,13 @@ def run_flask():
     app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
 
 # -------------------- 
-# Enhanced WebSocket audio server with precise synchronization
+# Low Latency WebSocket audio server
 # -------------------- 
 SAMPLE_RATE = 44100  # 44.1kHz for better mobile compatibility
-CHUNK = 1024  # Larger chunks for better quality and stability
-BUFFER_DURATION = 0.1  # 100ms buffer for synchronization
-SYNC_INTERVAL = 2.0  # Sync every 2 seconds
-MAX_BUFFER_SIZE = 100  # Maximum packets in buffer
+CHUNK = 512  # Smaller chunks for lower latency
+BUFFER_DURATION = 0.05  # 50ms buffer for tighter synchronization
+SYNC_INTERVAL = 1.5  # Sync every 1.5 seconds for faster corrections
+MAX_BUFFER_SIZE = 50  # Reduced for lower latency
 
 class PrecisionAudioBroadcaster:
     def __init__(self):
@@ -67,7 +67,7 @@ class PrecisionAudioBroadcaster:
         print(f"Client {client_id} disconnected. Total clients: {len(self.clients)}")
         
     async def broadcast_audio(self):
-        """Enhanced audio broadcasting with precise timing"""
+        """Low latency audio broadcasting"""
         while self.running:
             try:
                 if self.audio_buffer:
@@ -81,8 +81,8 @@ class PrecisionAudioBroadcaster:
                     audio_data = self.audio_buffer.popleft()
                     
                     # Calculate precise playback time
-                    # Use higher buffer for mobile devices (they need more time to process)
-                    mobile_buffer_time = 0.15  # 150ms for mobile devices
+                    # Reduced buffer for tighter synchronization
+                    mobile_buffer_time = 0.05  # 50ms for mobile devices
                     play_time = current_time + mobile_buffer_time
                     
                     # Create high-precision packet
@@ -97,7 +97,7 @@ class PrecisionAudioBroadcaster:
                         "channels": 2,
                         "chunk_size": CHUNK,
                         "buffer_time": mobile_buffer_time,
-                        "sync_mode": "precise",
+                        "sync_mode": "low_latency",
                         "sequence": self.packet_counter % 1000  # Rolling sequence number
                     }
                     
@@ -132,12 +132,12 @@ class PrecisionAudioBroadcaster:
                 if len(self.audio_buffer) > 5:
                     await asyncio.sleep(0.001)  # Process faster if buffer is full
                 else:
-                    await asyncio.sleep(0.005)  # Normal processing speed
+                    await asyncio.sleep(0.003)  # Faster processing for lower latency
                     
             except IndexError:
                 # Buffer is empty
                 self.stats['buffer_underruns'] += 1
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.005)
             except Exception as e:
                 print(f"Error in broadcast_audio: {e}")
                 await asyncio.sleep(0.1)
@@ -158,7 +158,7 @@ class PrecisionAudioBroadcaster:
                             "global_start_time": self.global_sync_time,
                             "server_time": current_time,
                             "client_count": len(self.clients),
-                            "sync_quality": "ultra_high",
+                            "sync_quality": "low_latency",
                             "message": "Global synchronization point - all devices should align"
                         }
                         
@@ -180,7 +180,7 @@ class PrecisionAudioBroadcaster:
                         "packet_rate": self.stats['total_packets'] / max((current_time - (self.start_time or current_time)), 1),
                         "sync_errors": self.stats['sync_errors'],
                         "buffer_underruns": self.stats['buffer_underruns'],
-                        "precision_mode": "ultra_high"
+                        "precision_mode": "low_latency"
                     }
                     
                     disconnected = set()
@@ -221,9 +221,9 @@ async def handle_client(websocket):
             "sample_rate": SAMPLE_RATE,
             "chunk_size": CHUNK,
             "buffer_duration": BUFFER_DURATION,
-            "sync_mode": "ultra_precise",
+            "sync_mode": "low_latency",
             "mobile_optimized": True,
-            "message": f"Connected as {client_id} to synchronized audio stream"
+            "message": f"Connected as {client_id} to low-latency audio stream"
         }
         await websocket.send(json.dumps(init_packet))
         
@@ -233,7 +233,7 @@ async def handle_client(websocket):
             "server_time": time.time(),
             "client_id": client_id,
             "calibration_tone": True,
-            "message": "Calibrating synchronization - you may hear a brief tone"
+            "message": "Calibrating synchronization - low latency mode"
         }
         await websocket.send(json.dumps(sync_cal_packet))
         
@@ -279,7 +279,7 @@ async def handle_client(websocket):
                     if client_buffer < 2:  # Low buffer warning
                         buffer_boost = {
                             "type": "buffer_boost",
-                            "boost_duration": 0.2,  # 200ms extra buffer
+                            "boost_duration": 0.1,  # 100ms extra buffer
                             "priority": "high"
                         }
                         await websocket.send(json.dumps(buffer_boost))
@@ -340,7 +340,7 @@ def enhanced_audio_callback(indata, frames, time_info, status):
         print(f"Error in audio_callback: {e}")
 
 async def main_ws():
-    """Main WebSocket server with enhanced features"""
+    """Main WebSocket server with low latency features"""
     broadcaster.running = True
     broadcaster.start_time = time.time()
     
@@ -350,7 +350,7 @@ async def main_ws():
     
     try:
         # Start enhanced audio input stream
-        print("Starting high-quality audio capture...")
+        print("Starting low-latency audio capture...")
         with sd.InputStream(
             samplerate=SAMPLE_RATE,
             channels=2,
@@ -359,13 +359,13 @@ async def main_ws():
             blocksize=CHUNK,
             latency='low'  # Minimize input latency
         ):
-            print(f"Audio input started: {SAMPLE_RATE}Hz, {CHUNK} samples per chunk")
+            print(f"Audio input started: {SAMPLE_RATE}Hz, {CHUNK} samples per chunk (LOW LATENCY MODE)")
             
             # Start WebSocket server
             async with websockets.serve(handle_client, "0.0.0.0", 8765):
-                print("Enhanced WebSocket server running on ws://0.0.0.0:8765")
+                print("Low Latency WebSocket server running on ws://0.0.0.0:8765")
                 print("Ready for synchronized multi-device audio streaming")
-                print("Connect your mobile devices and enjoy synchronized movie audio!")
+                print("Optimized for minimal delay between devices!")
                 await asyncio.Future()  # run forever
                 
     except Exception as e:
@@ -379,11 +379,12 @@ async def main_ws():
 # Start both servers 
 # -------------------- 
 if __name__ == "__main__":
-    print("=== Synchronized Multi-Device Speaker System ===")
+    print("=== Low Latency Multi-Device Speaker System ===")
     print("1. Start this server on your laptop")
     print("2. Connect mobile phones to the same network")
     print("3. Open browser on each phone and go to laptop's IP:5000")
-    print("4. Play your movie/audio on laptop - all devices will be synchronized!")
+    print("4. Play your movie/audio on laptop - devices will be closely synchronized!")
+    print("NOTE: Lower latency = tighter sync but may be less stable on slow networks")
     print("")
     
     # Start Flask in a thread
