@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎵 Sync Speaker - Movie Audio</title>
+    <title>🎵 Sync Speaker - Low Latency</title>
     <style>
         * {
             box-sizing: border-box;
@@ -290,7 +290,7 @@
         <div class="connection-status" id="connectionStatus">Offline</div>
         
         <h1>Sync Speaker</h1>
-        <div class="subtitle">Multi-Device Movie Audio</div>
+        <div class="subtitle">Low Latency Multi-Device Audio</div>
         
         <div class="device-info" id="deviceInfo">
             Mobile Device Detected<br>
@@ -336,12 +336,12 @@
         </div>
         
         <div class="status-log" id="statusLog">
-            Ready to connect to your laptop for synchronized movie audio...
+            Ready to connect - optimized for minimal delay between devices...
         </div>
     </div>
 
     <script>
-        class EnhancedSyncAudioClient {
+        class LowLatencySyncAudioClient {
             constructor() {
                 this.ws = null;
                 this.audioContext = null;
@@ -357,10 +357,10 @@
                 this.bufferHealth = 0;
                 this.syncQuality = 'Unknown';
                 
-                // Mobile-optimized audio buffering
+                // Low latency audio buffering
                 this.audioBuffer = [];
-                this.maxBufferSize = 15; // Larger buffer for stability
-                this.minBufferSize = 3;
+                this.maxBufferSize = 8; // Reduced for lower latency
+                this.minBufferSize = 2; // Lower minimum for faster playback start
                 this.isPlaying = false;
                 this.nextPlayTime = 0;
                 
@@ -381,13 +381,12 @@
             }
             
             detectNetworkSetup() {
-                // Try to get local IP for better UX
                 try {
                     const hostname = window.location.hostname;
                     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                        this.log("Running locally - connect your laptop and mobile to same WiFi");
+                        this.log("Running locally - connect laptop and mobile to same WiFi");
                     } else {
-                        this.log(`Connected to ${hostname} - ready for movie audio sync`);
+                        this.log(`Connected to ${hostname} - low latency mode ready`);
                     }
                 } catch (e) {
                     this.log("Network detection failed - manual connection required");
@@ -422,12 +421,12 @@
                 // Update device info
                 if (this.isMobile) {
                     if (this.isIOS) {
-                        this.deviceInfo.innerHTML = 'iOS Device Detected<br>Tap "Enable Audio" first for best results';
+                        this.deviceInfo.innerHTML = 'iOS Device - Low Latency Mode<br>Tap "Enable Audio" first';
                     } else {
-                        this.deviceInfo.innerHTML = 'Android Device Detected<br>Tap "Enable Audio" to prepare audio system';
+                        this.deviceInfo.innerHTML = 'Android Device - Low Latency Mode<br>Tap "Enable Audio" first';
                     }
                 } else {
-                    this.deviceInfo.innerHTML = 'Desktop Browser<br>Audio should work automatically';
+                    this.deviceInfo.innerHTML = 'Desktop Browser - Low Latency Mode<br>Audio should work automatically';
                     this.enableAudioBtn.style.display = 'none';
                 }
                 
@@ -438,33 +437,26 @@
             }
             
             preventSleep() {
-                // Try to prevent mobile screen from sleeping during movie
                 try {
                     if ('wakeLock' in navigator) {
                         navigator.wakeLock.request('screen').then(() => {
-                            this.log("Screen wake lock enabled - screen won't sleep during movie");
-                        }).catch(() => {
-                            this.log("Wake lock not available - screen may sleep");
-                        });
+                            this.log("Screen wake lock enabled");
+                        }).catch(() => {});
                     }
-                } catch (e) {
-                    // Wake lock not supported
-                }
+                } catch (e) {}
             }
             
             async enableAudio() {
-                this.log("Initializing audio system for movie playback...");
+                this.log("Initializing low latency audio system...");
                 
                 try {
-                    // Create audio context with optimal settings for movie audio
                     const contextOptions = {
                         sampleRate: this.isMobile ? 44100 : 48000,
-                        latencyHint: this.isMobile ? 'playback' : 'interactive'
+                        latencyHint: 'interactive'  // Lower latency mode for all devices
                     };
                     
                     this.audioContext = new (window.AudioContext || window.webkitAudioContext)(contextOptions);
                     
-                    // Resume context if suspended (required on mobile)
                     if (this.audioContext.state === 'suspended') {
                         await this.audioContext.resume();
                     }
@@ -477,10 +469,9 @@
                         this.connectBtn.disabled = false;
                         this.nextPlayTime = this.audioContext.currentTime;
                         
-                        // Play test tone for confirmation
                         await this.playTestTone();
                         
-                        this.log(`Audio system ready! Sample rate: ${this.audioContext.sampleRate}Hz`);
+                        this.log(`Low latency audio ready! ${this.audioContext.sampleRate}Hz`);
                         this.startAudioProcessing();
                         
                     } else {
@@ -493,9 +484,8 @@
             }
             
             async playTestTone() {
-                // Play a pleasant confirmation tone
-                const duration = 0.3;
-                const frequency = 880; // A5 note
+                const duration = 0.2;
+                const frequency = 880;
                 
                 const audioBuffer = this.audioContext.createBuffer(2, this.audioContext.sampleRate * duration, this.audioContext.sampleRate);
                 
@@ -503,7 +493,7 @@
                     const channelData = audioBuffer.getChannelData(channel);
                     for (let i = 0; i < channelData.length; i++) {
                         const t = i / this.audioContext.sampleRate;
-                        channelData[i] = Math.sin(2 * Math.PI * frequency * t) * 0.1 * Math.exp(-t * 3);
+                        channelData[i] = Math.sin(2 * Math.PI * frequency * t) * 0.1 * Math.exp(-t * 5);
                     }
                 }
                 
@@ -520,24 +510,18 @@
             }
             
             startAudioProcessing() {
-                // Continuous audio processing loop for smooth movie audio
                 const processAudio = () => {
                     if (!this.audioEnabled || !this.audioContext) return;
                     
                     try {
-                        // Process buffered audio chunks
                         this.processAudioBuffer();
-                        
-                        // Update buffer health display
                         this.updateBufferHealthDisplay();
-                        
                     } catch (error) {
                         this.log(`Audio processing error: ${error.message}`);
                     }
                     
-                    // Schedule next processing
                     if (this.audioEnabled) {
-                        setTimeout(processAudio, 5); // Process every 5ms for smooth playback
+                        setTimeout(processAudio, 3); // Faster processing: every 3ms instead of 5ms
                     }
                 };
                 
@@ -547,12 +531,10 @@
             processAudioBuffer() {
                 if (this.audioBuffer.length === 0) return;
                 
-                // Maintain optimal buffer size
                 while (this.audioBuffer.length > this.maxBufferSize) {
-                    this.audioBuffer.shift(); // Remove oldest to prevent delay buildup
+                    this.audioBuffer.shift();
                 }
                 
-                // Play audio if we have enough buffered
                 if (this.audioBuffer.length >= this.minBufferSize && !this.isPlaying) {
                     this.playNextAudioChunk();
                 }
@@ -564,8 +546,7 @@
                 this.isPlaying = true;
                 
                 try {
-                    // Take multiple chunks for smoother playback
-                    const chunksToPlay = Math.min(3, this.audioBuffer.length);
+                    const chunksToPlay = Math.min(2, this.audioBuffer.length);
                     const chunks = this.audioBuffer.splice(0, chunksToPlay);
                     
                     if (chunks.length > 0) {
@@ -582,7 +563,6 @@
             async playCombinedAudioChunks(chunks) {
                 if (!chunks.length) return;
                 
-                // Combine multiple chunks for smoother movie audio playback
                 let totalSamples = 0;
                 chunks.forEach(chunk => totalSamples += chunk.audioData.length);
                 
@@ -596,18 +576,14 @@
                     offset += chunk.audioData.length;
                 });
                 
-                // Ensure we have stereo data
                 const samplesPerChannel = combinedAudio.length / 2;
                 if (samplesPerChannel <= 0 || !Number.isInteger(samplesPerChannel)) {
-                    this.log(`Invalid audio format: ${combinedAudio.length} samples`);
                     return;
                 }
                 
-                // Create high-quality audio buffer
                 const sampleRate = chunks[0].sampleRate || this.audioContext.sampleRate;
                 const audioBuffer = this.audioContext.createBuffer(2, samplesPerChannel, sampleRate);
                 
-                // Fill stereo channels with volume control
                 const leftChannel = audioBuffer.getChannelData(0);
                 const rightChannel = audioBuffer.getChannelData(1);
                 
@@ -616,9 +592,9 @@
                     rightChannel[i] = combinedAudio[i * 2 + 1] * this.volume;
                 }
                 
-                // Schedule playback with precise timing
+                // Schedule playback with minimal delay
                 const currentTime = this.audioContext.currentTime;
-                const scheduleTime = Math.max(currentTime + 0.005, this.nextPlayTime);
+                const scheduleTime = Math.max(currentTime + 0.002, this.nextPlayTime); // Reduced from 0.005 to 0.002
                 
                 const source = this.audioContext.createBufferSource();
                 const gainNode = this.audioContext.createGain();
@@ -631,26 +607,17 @@
                 
                 source.start(scheduleTime);
                 
-                // Update next scheduled time for seamless playback
                 this.nextPlayTime = scheduleTime + audioBuffer.duration;
-                
-                // Update visualizer
                 this.updateVisualizer(combinedAudio);
-                
-                // Calculate audio quality metrics
-                const maxAmplitude = Math.max(...combinedAudio.map(Math.abs));
-                const duration = audioBuffer.duration * 1000;
-                
-                this.log(`Playing ${duration.toFixed(1)}ms of movie audio (${chunks.length} chunks combined)`);
             }
             
             connect() {
                 if (!this.audioEnabled && this.isMobile) {
-                    this.log("Please enable audio first by tapping 'Enable Audio'");
+                    this.log("Please enable audio first");
                     return;
                 }
                 
-                this.log("Connecting to laptop for synchronized movie audio...");
+                this.log("Connecting for low latency sync...");
                 
                 const wsUrl = `ws://${window.location.hostname}:8765`;
                 
@@ -659,13 +626,12 @@
                     
                     this.ws.onopen = () => {
                         this.isConnected = true;
-                        this.log("Connected! Ready for synchronized movie playback");
+                        this.log("Connected! Low latency mode active");
                         this.updateConnectionStatus('Connected');
                         this.connectBtn.disabled = true;
                         this.disconnectBtn.disabled = false;
                         this.connectBtn.classList.add('connected');
                         
-                        // Start sync measurements
                         this.startSyncMeasurements();
                     };
                     
@@ -675,7 +641,7 @@
                     
                     this.ws.onclose = () => {
                         this.isConnected = false;
-                        this.log("Disconnected from laptop");
+                        this.log("Disconnected");
                         this.updateConnectionStatus('Disconnected');
                         this.connectBtn.disabled = false;
                         this.disconnectBtn.disabled = true;
@@ -683,8 +649,8 @@
                         this.stopSyncMeasurements();
                     };
                     
-                    this.ws.onerror = (error) => {
-                        this.log("Connection failed - check laptop is running server");
+                    this.ws.onerror = () => {
+                        this.log("Connection failed - check server");
                         this.updateConnectionStatus('Error');
                     };
                     
@@ -697,18 +663,16 @@
                 if (this.ws) {
                     this.ws.close();
                 }
-                this.audioBuffer = []; // Clear audio buffer
+                this.audioBuffer = [];
                 this.stopSyncMeasurements();
             }
             
             startSyncMeasurements() {
-                // Measure sync every 3 seconds
                 this.syncInterval = setInterval(() => {
                     this.measureSync();
-                }, 3000);
+                }, 2000); // Every 2 seconds for faster corrections
                 
-                // Initial measurement
-                setTimeout(() => this.measureSync(), 100);
+                setTimeout(() => this.measureSync(), 50);
             }
             
             stopSyncMeasurements() {
@@ -733,7 +697,7 @@
                 switch (data.type) {
                     case 'init':
                         this.clientId = data.client_id;
-                        this.log(`Registered as ${this.clientId} - movie audio sync ready`);
+                        this.log(`Registered as ${this.clientId}`);
                         break;
                         
                     case 'audio':
@@ -760,44 +724,28 @@
             }
             
             async handleAudioData(data) {
-                if (!this.audioEnabled) {
-                    this.log("Audio not enabled - skipping movie audio");
-                    return;
-                }
+                if (!this.audioEnabled) return;
                 
                 try {
-                    // Decode audio data from server
                     const audioBytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
                     const audioInt16 = new Int16Array(audioBytes.buffer);
                     
-                    if (audioInt16.length === 0) {
-                        return; // Skip empty audio
-                    }
+                    if (audioInt16.length === 0) return;
                     
-                    // Convert to float32 with proper scaling for movie audio
                     const samples = new Float32Array(audioInt16.length);
-                    const scale = 1.0 / 16383.0; // Match server scaling
+                    const scale = 1.0 / 16383.0;
                     
                     for (let i = 0; i < audioInt16.length; i++) {
                         samples[i] = audioInt16[i] * scale;
-                        // Gentle limiting to prevent distortion in movie audio
                         if (samples[i] > 0.98) samples[i] = 0.98;
                         if (samples[i] < -0.98) samples[i] = -0.98;
                     }
                     
-                    // Verify stereo format
-                    if (samples.length % 2 !== 0) {
-                        this.log(`Warning: Non-stereo audio data received`);
-                        return;
-                    }
+                    if (samples.length % 2 !== 0) return;
                     
-                    // Check audio quality
                     const maxAmplitude = Math.max(...samples.map(Math.abs));
-                    if (maxAmplitude < 0.001) {
-                        return; // Skip very quiet audio
-                    }
+                    if (maxAmplitude < 0.001) return;
                     
-                    // Add to buffer with metadata
                     const audioChunk = {
                         audioData: samples,
                         timestamp: data.timestamp,
@@ -808,17 +756,10 @@
                     };
                     
                     this.audioBuffer.push(audioChunk);
-                    
-                    // Update buffer health
                     this.bufferHealth = this.audioBuffer.length;
                     
                 } catch (error) {
-                    this.log(`Audio processing error: ${error.message}`);
                     this.consecutiveSyncErrors++;
-                    
-                    if (this.consecutiveSyncErrors > 5) {
-                        this.reportSyncError('Audio processing errors');
-                    }
                 }
             }
             
@@ -829,30 +770,26 @@
                     const offset = currentTime - data.server_time;
                     this.clockSyncSamples.push(offset);
                     
-                    // Keep only recent samples
                     if (this.clockSyncSamples.length > 10) {
                         this.clockSyncSamples.shift();
                     }
                     
-                    // Calculate average offset
                     this.serverTimeOffset = this.clockSyncSamples.reduce((a, b) => a + b) / this.clockSyncSamples.length;
-                    
                     this.updateSyncQuality();
                 }
             }
             
             handleGlobalSync(data) {
-                this.log(`Global sync point set - all devices will align at ${new Date(data.global_start_time * 1000).toLocaleTimeString()}`);
+                this.log(`Global sync point activated`);
                 
-                // Prepare for global synchronization
                 if (data.global_start_time) {
                     const currentTime = performance.now() / 1000;
                     const timeToSync = data.global_start_time - currentTime;
                     
                     if (timeToSync > 0) {
                         setTimeout(() => {
-                            this.log("Global sync activated - all devices now synchronized!");
-                            this.audioBuffer = []; // Clear buffer for fresh start
+                            this.log("Synchronized!");
+                            this.audioBuffer = [];
                             this.nextPlayTime = this.audioContext.currentTime;
                         }, timeToSync * 1000);
                     }
@@ -862,30 +799,14 @@
             handlePongResponse(data) {
                 if (data.client_time) {
                     const currentTime = performance.now() / 1000;
-                    this.latency = (currentTime - data.client_time) * 1000; // Convert to ms
+                    this.latency = (currentTime - data.client_time) * 1000;
                     this.latencyElement.textContent = Math.round(this.latency) + ' ms';
-                    
-                    // Reset error counter on successful ping
                     this.consecutiveSyncErrors = 0;
                 }
             }
             
             handleBufferBoost(data) {
-                this.log("Buffer boost received - improving playback stability");
-                this.maxBufferSize = Math.min(this.maxBufferSize + 3, 20);
-            }
-            
-            reportSyncError(error) {
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    const errorReport = {
-                        type: 'sync_error',
-                        error: error,
-                        client_id: this.clientId,
-                        buffer_size: this.audioBuffer.length,
-                        timestamp: performance.now() / 1000
-                    };
-                    this.ws.send(JSON.stringify(errorReport));
-                }
+                this.maxBufferSize = Math.min(this.maxBufferSize + 2, 12);
             }
             
             updateSyncQuality() {
@@ -915,7 +836,6 @@
                 const health = Math.round((this.bufferHealth / this.maxBufferSize) * 100);
                 this.bufferHealthElement.textContent = `${health}%`;
                 
-                // Color coding
                 if (health < 30) {
                     this.bufferHealthElement.style.color = '#F44336';
                 } else if (health < 70) {
@@ -934,7 +854,6 @@
                 this.visualizer = document.getElementById('visualizer');
                 this.visualizerBars = [];
                 
-                // Create visualizer bars (fewer for mobile performance)
                 const barCount = this.isMobile ? 20 : 32;
                 for (let i = 0; i < barCount; i++) {
                     const bar = document.createElement('div');
@@ -968,14 +887,12 @@
                 const timestamp = new Date().toLocaleTimeString();
                 const logMessage = `[${timestamp}] ${message}`;
                 this.statusLog.textContent = logMessage;
-                this.statusLog.scrollTop = this.statusLog.scrollHeight;
                 console.log(logMessage);
             }
         }
         
-        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            new EnhancedSyncAudioClient();
+            new LowLatencySyncAudioClient();
         });
     </script>
 </body>
