@@ -437,14 +437,38 @@
             }
             
             preventSleep() {
+    try {
+        if ('wakeLock' in navigator) {
+            const requestWakeLock = async () => {
                 try {
-                    if ('wakeLock' in navigator) {
-                        navigator.wakeLock.request('screen').then(() => {
-                            this.log("Screen wake lock enabled");
-                        }).catch(() => {});
-                    }
-                } catch (e) {}
-            }
+                    this.wakeLock = await navigator.wakeLock.request('screen');
+                    this.log("Screen wake lock enabled");
+
+                    this.wakeLock.addEventListener('release', () => {
+                        this.log('Screen Wake Lock released');
+                    });
+                } catch (err) {
+                    this.log(`Wake Lock failed: ${err.name}, ${err.message}`);
+                }
+            };
+
+            // Request initial wake lock
+            requestWakeLock();
+
+            // Re-request wake lock if user switches away and comes back
+            document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible') {
+                    requestWakeLock();
+                }
+            });
+        } else {
+            this.log("Wake Lock API not supported on this device");
+        }
+    } catch (e) {
+        this.log("Wake Lock error: " + e.message);
+    }
+}
+
             
             async enableAudio() {
                 this.log("Initializing low latency audio system...");
@@ -456,7 +480,14 @@
                     };
                     
                     this.audioContext = new (window.AudioContext || window.webkitAudioContext)(contextOptions);
-                    
+                    // Resume audio context automatically if the browser suspends it
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && this.audioContext?.state === 'suspended') {
+        this.audioContext.resume();
+        this.log("AudioContext resumed after visibility change");
+    }
+});
+
                     if (this.audioContext.state === 'suspended') {
                         await this.audioContext.resume();
                     }
