@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SyncSpeaker</string>
+    <string name="channel_name">Sync Speaker</string>
+    <string name="channel_desc">Foreground audio sync</string>
+    <string name="notif_title">Sync Speaker running</string>
+    <string name="notif_text">Streaming low-latency audio</string>
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="hint_server">Server host (e.g., 10.0.2.2)</string>
+    <string name="hint_port">Port</string>
+</resources>
